@@ -1,0 +1,15 @@
+{
+  "identifier": "main",
+  "description": "Only the bundled application may use the scoped native command gateway.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
+    "allow-dispatch",
+    "dialog:allow-confirm",
+    "dialog:allow-message",
+    "core:window:allow-close",
+    "core:window:allow-destroy"
+  ]
+}

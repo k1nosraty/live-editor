@@ -1,0 +1,25 @@
+# Security boundaries and limitations
+
+## Trust model
+
+Project files, JavaScript, repository configuration, subprocess output and extension packages are untrusted input. The bundled app UI and Rust code are trusted. Users deliberately select native files/workspaces and explicitly start project/Git operations. A selected project is not a permission to run its scripts automatically.
+
+- Only the `main` window's bundled origin has native command permission. No remote capability is declared. Custom commands are included in the Tauri AppManifest allowlist. The gateway accepts an operation enum-like allowlist, not shell text.
+- Native dialogs create path grants in Rust. Canonical paths must be descendants of approved roots or individually approved files. New file paths require a canonical existing parent. Traversal/symlink-escape negative tests cover both document and preview paths.
+- Preview iframes allow scripts/forms but no same-origin access, native APIs, top navigation, popups or downloads. Native previews use a separate loopback server and restricted CSP; browser development uses a restrictive srcdoc CSP. No arbitrary remote URLs are loaded by the shell.
+- The preview server binds only loopback, checks Host, requires a 256-bit route token, allows GET only, disables caching, restricts size, denies hidden files and serves no mutation APIs. Opaque-origin module requests can read this token-protected origin; the token is not an authorization for native commands.
+- Messages must originate in the actual iframe and carry its current session channel. A project can spoof its own console/selection messages. Those messages are display-only; native operations are never dispatched from messages. CSS source writes require a separate user action and PostCSS transformations.
+- Save compares SHA-256 revisions to detect normal external modifications and uses a temporary file replacement. It is not a transactional filesystem lock against a malicious local process racing between comparison and replacement. Strong adversarial same-user local filesystem races are outside the tested guarantee.
+- Git uses argument arrays, `--` before filenames, validates branch names, disables hooks/fsmonitor, disables external diff/textconv and forbids the `ext` transport. It delegates credentials to system Git/credential manager; Renderift does not collect or store tokens. Existing Git filters/credential helpers may execute configured programs on explicit Git actions. Do not run Git operations in an untrusted repository configuration.
+- Vite start requires confirmation. Package scripts and dependencies have normal user-level process privileges, as in a terminal. This is explicitly distinct from sandboxed page JS. Node.js/package managers/dependencies are never downloaded or installed by opening the app. The service uses a fixed loopback host and strict port.
+- Windows development servers use a kill-on-close Job Object. Normal Unix stop/exit kills the process group; an uncatchable host-process kill on Unix may leave children. The primary target is Windows.
+- Extensions are data-only. Their manifest is bounded/validated; the archive must contain only a root manifest.json. Oversized entries, unsupported permissions, incompatible APIs and traversal are rejected. No arbitrary extension JS is evaluated, imported into the UI, or granted native filesystem/shell/network access. `document:read` requires an install-time confirmation.
+- User HTML and extension panel text are not inserted into the privileged DOM using innerHTML. Preview HTML exists only in the sandbox. CSP denies objects and unrelated remote connections in the app.
+
+## Remaining release gates
+
+Chromium tests verify iframe parent access is denied and the preview has no Tauri internals. This is useful evidence but is not equivalent to a WebView2 IPC penetration test. Before stable publication, run hostile-code tests on packaged Windows WebView2, including direct IPC transport attempts, iframe navigations and app-origin requests. Tauri documents limitations around iframe origin discrimination on Linux/Android; no security claim for those platforms is made here.
+
+A sandboxed iframe can still share a renderer with the app. Infinite synchronous loops can make it unresponsive. Strong hang containment requires a separate preview webview/process architecture; no complete process-isolation claim is made.
+
+The app is unsigned. A release must include checksums, identify the unsigned build and be tested on a clean supported Windows installation. There is no telemetry or plaintext credential store.
