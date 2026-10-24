@@ -1,4 +1,6 @@
 import type { Playground } from '../../shared/types';
+const previewPolicy =
+  "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval' blob:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 export function escapeScript(text: string): string {
   return text.replace(/<\/script/gi, '<\\/script');
 }
@@ -6,7 +8,17 @@ export function buildPlayground(
   pg: Pick<Playground, 'html' | 'css' | 'js'>,
   bridge: string,
 ): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'unsafe-eval' blob:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><script>${escapeScript(bridge)}</script><style id="renderift-css">${pg.css.replace(/<\/style/gi, '<\\/style')}</style></head><body>${pg.html}<script>${escapeScript(pg.js)}\n//# sourceURL=playground.js\n</script></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${previewPolicy}"><script>${escapeScript(bridge)}</script><style id="renderift-css">${pg.css.replace(/<\/style/gi, '<\\/style')}</style></head><body>${pg.html}<script>${escapeScript(pg.js)}\n//# sourceURL=playground.js\n</script></body></html>`;
+}
+export function buildHtmlDocument(html: string, bridge: string): string {
+  const document = new DOMParser().parseFromString(html, 'text/html');
+  const policy = document.createElement('meta');
+  policy.httpEquiv = 'Content-Security-Policy';
+  policy.content = previewPolicy;
+  const script = document.createElement('script');
+  script.textContent = escapeScript(bridge);
+  document.head.prepend(policy, script);
+  return `<!doctype html>${document.documentElement.outerHTML}`;
 }
 export class Scheduler {
   private timer: ReturnType<typeof setTimeout> | undefined;

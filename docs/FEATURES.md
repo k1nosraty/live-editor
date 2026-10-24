@@ -12,6 +12,8 @@ Playground sidebar: create/select/rename/duplicate/delete sessions; deletion ask
 
 ## Preview and inspector
 
+File → New creates an `untitled.html` buffer that previews immediately without saving or opening a folder. A standalone `.html`/`.htm` file opened without a workspace previews the same way. Full HTML documents retain their head, inline styles/scripts, language and text direction; switching tabs updates the preview. These self-contained documents use the playground sandbox and network restrictions. Open the containing folder to preview relative local assets.
+
 Updates default to 200 ms and are configurable. CSS-only changes inject without replacing JS state; HTML/JS refresh the execution context. Manual refresh, auto toggle, mobile/tablet/desktop/custom dimensions, rotation, zoom, fit/reset and a draggable viewport handle affect the real iframe viewport. Desktop can open the loopback preview in the system browser. The full-preview button expands the preview panel.
 
 The pointer tool selects DOM elements and displays their tag, ID/classes, dimensions, matching rules and computed styles. Box model layers are interactive shortcuts for property selection. Choose a matching standalone CSS source rule and a property/value; Apply changes the exact PostCSS declaration and source buffer, then supports editor Undo. Use Go to rule to navigate. Open referenced CSS before source editing. Framework/generated/inline style source mapping is not claimed.

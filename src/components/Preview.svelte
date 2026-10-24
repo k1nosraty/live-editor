@@ -18,7 +18,12 @@
   import { studio } from '../app/state.svelte';
   import { attempt } from '../app/actions';
   import { desktop, native } from '../services/native';
-  import { buildPlayground, bridgeScript, Scheduler } from '../features/preview/engine';
+  import {
+    buildPlayground,
+    buildHtmlDocument,
+    bridgeScript,
+    Scheduler,
+  } from '../features/preview/engine';
   import { selectionMessage } from '../features/inspector/validation';
   import type { Selection } from '../shared/types';
   let { onselect }: { onselect: (selection: Selection | null) => void } = $props();
@@ -41,6 +46,11 @@
   let staticSignature = '';
   let sequence = 0;
   let requested = 0;
+  let standalone = $derived(
+    studio.mode === 'project' &&
+      /\.html?$/i.test(studio.current?.name ?? '') &&
+      (!studio.current?.path || !studio.root),
+  );
   const scheduler = new Scheduler();
   let rendering = Promise.resolve();
   const bridge = () => bridgeScript(channel);
@@ -56,8 +66,9 @@
         const mode = studio.mode;
         const pg = studio.playground;
         const current = { html: pg.html, css: pg.css, js: pg.js };
-        if (mode === 'playground') {
+        if (mode === 'playground' || standalone) {
           if (
+            mode === 'playground' &&
             !force &&
             ready &&
             previousMode === mode &&
@@ -70,7 +81,9 @@
             return;
           }
           channel = crypto.randomUUID();
-          const html = buildPlayground(current, bridge());
+          const html = standalone
+            ? buildHtmlDocument(studio.current!.text, bridge())
+            : buildPlayground(current, bridge());
           ready = false;
           if (desktop) {
             const base = await native<string>('playground_preview', { html });
@@ -140,10 +153,11 @@
   $effect(() => {
     const signature = JSON.stringify([
       studio.mode,
+      studio.active,
       studio.playground,
       studio.serverUrl,
       studio.root,
-      studio.mode === 'project' ? studio.docs.map((d) => [d.path, d.text]) : null,
+      studio.mode === 'project' ? studio.docs.map((d) => [d.name, d.path, d.text]) : null,
     ]);
     void signature;
     if (auto) scheduler.schedule(() => attempt(() => render()), studio.settings.debounce);
@@ -206,21 +220,23 @@
   <header class="panel-title">
     <div>
       <span class="live-dot"></span><strong>Live Preview</strong><span class="muted small"
-        >{studio.serverUrl
-          ? 'Vite · saved files'
-          : studio.mode === 'playground'
-            ? 'Playground'
-            : 'Static workspace'}</span
+        >{standalone
+          ? 'HTML document'
+          : studio.serverUrl
+            ? 'Vite · saved files'
+            : studio.mode === 'playground'
+              ? 'Playground'
+              : 'Static workspace'}</span
       >
     </div>
     <div class="tools">
       <button
         class:chosen={inspecting}
-        title={studio.serverUrl
+        title={studio.serverUrl && !standalone
           ? 'Inspector is available for static projects and playgrounds'
           : 'Inspect element'}
         aria-label="Inspect element"
-        disabled={!!studio.serverUrl}
+        disabled={!!studio.serverUrl && !standalone}
         onclick={() => {
           inspecting = !inspecting;
           post('inspector', inspecting);
@@ -330,7 +346,7 @@
             ></iframe>{:else}<div class="empty">
               <Monitor size={32} />
               <h2>Your canvas is ready</h2>
-              <p>Open a static project or start a Vite server.</p>
+              <p>Write HTML in a new file, open a static project, or start a Vite server.</p>
             </div>{/if}
         </div>
         {#if width}<button
@@ -344,7 +360,7 @@
   </div>
   <footer class="preview-footer">
     <span class="address"
-      >{studio.serverUrl ||
+      >{(standalone ? studio.current?.name : studio.serverUrl) ||
         (studio.mode === 'playground'
           ? 'playground / index.html'
           : (studio.current?.name ?? 'index.html'))}</span
