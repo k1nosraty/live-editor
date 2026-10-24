@@ -49,3 +49,19 @@ Chromium iframe tests are not equivalent to packaged WebView2 IPC penetration te
 Functional scope boundaries remain explicit in README: standalone CSS source edits, parser-level diagnostics, relative static assets under one root, saved-file Vite preview, declarative extensions and file-only duplicate. No nonexistent feature is documented as verified.
 
 Local NSIS reported two packaging advisories: `/a` file-attribute preservation is disabled on a non-Windows host, and the generated Tauri template referenced an unset English `choowHowToInstall` language string. The installer was generated successfully, but its screens have not been inspected on Windows; verify that label before stable release.
+
+## Linux support update
+
+A native x86_64 Linux build and both Tauri bundles were generated on Ubuntu 24.04: `.deb` approximately 4.63 MiB and AppImage approximately 79.02 MiB. The larger AppImage includes a portable dependency set; these local sizes do not establish Windows/Linux size equivalence or older glibc compatibility. Ubuntu 22.04 remains the CI release baseline.
+
+The main-frame authenticated native gateway adds two Rust negative tests and removes frontend access to dialog/window mutation plugins. A native WebKit WebDriver test covers real rendering, console interaction, a valid native request, rejection of a forged native request, parent-DOM denial and absence of the native secret inside the preview.
+
+The local virtual-display command was blocked before application launch: `dbus-daemon: Failed to open socket: Operation not permitted`. This is a container execution limitation; no local Linux GUI smoke result is claimed. The same command is configured on the Linux GitHub runner, where ordinary desktop/DBus sockets are available. Record hosted results separately once that run actually completes. See LINUX.md for install/build details.
+
+QML was investigated, not implemented. QML-SUPPORT.md records an optional Qt provider design and its tooling, process, import and inspector constraints.
+
+The initial hosted Windows run passed frontend/core verification but failed two Windows path tests: raw temporary-directory paths were compared to Windows canonical extended paths. The root containment helper and preview-server constructor now canonicalize their root before containment/overlay checks. The existing tests are retained as regressions rather than skipped; the updated hosted Windows run must pass before packaging is considered certified.
+
+Final local Linux checks for the support update: full desktop Rust Clippy passed; 12 Rust tests (including both Vite runtimes) passed; 10 frontend unit tests and Svelte/ESLint checks passed. Eight browser workflows passed initially; the Rust-server browser test hit a concurrent Cargo build lock, then passed when rerun after native compilation. The existing nine browser workflows therefore all passed on the updated code, with that infrastructure-only timeout recorded. No local native GUI execution result is claimed. Windows target compilation is checked separately; Windows runtime regression tests await the updated hosted CI results.
+
+A repeated local AppImage bundle attempt hit a segmentation fault in linuxdeploy's GTK plugin. The final AppImage was successfully rebuilt from a clean generated AppDir with `NO_STRIP=true`; the Linux CI uses that same setting. Both final package files exist and their checksums are included in the Linux delivery bundle. These are Ubuntu 24.04-built local candidates (the native executable references GLIBC_2.39), not verified Ubuntu 22.04 release artifacts.

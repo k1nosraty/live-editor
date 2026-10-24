@@ -10,3 +10,6 @@ playwright-report/
 graphify-out/
 
 release/
+
+__pycache__/
+*.pyc

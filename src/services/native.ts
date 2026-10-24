@@ -1,10 +1,13 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { confirm, message } from '@tauri-apps/plugin-dialog';
 export const desktop = isTauri();
 export async function native<T>(command: string, args: Record<string, unknown> = {}): Promise<T> {
   if (!desktop)
     throw new Error('This action requires the desktop application. Run npm run tauri dev.');
-  return invoke<T>('dispatch', { op: command, args });
+  const token = (window as Window & { __RENDERIFT_NATIVE_TOKEN__?: string })
+    .__RENDERIFT_NATIVE_TOKEN__;
+  if (!token)
+    throw new Error('Native authentication was not initialized in the main application frame.');
+  return invoke<T>('dispatch', { op: command, args, token });
 }
 export async function pickFile(): Promise<string | null> {
   return native<string | null>('select_file');
@@ -16,10 +19,10 @@ export async function savePath(name: string): Promise<string | null> {
   return native<string | null>('select_save', { name });
 }
 export async function ask(text: string): Promise<boolean> {
-  return desktop ? confirm(text, { title: 'Renderift', kind: 'warning' }) : window.confirm(text);
+  return desktop ? native<boolean>('confirm', { text }) : window.confirm(text);
 }
 export async function inform(text: string): Promise<void> {
-  if (desktop) await message(text, { title: 'Renderift' });
+  if (desktop) await native('inform', { text });
   else window.alert(text);
 }
 export function download(name: string, data: BlobPart, type = 'text/plain'): void {

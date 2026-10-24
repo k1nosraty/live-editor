@@ -51,9 +51,10 @@ impl Scope {
         }
     }
     pub fn in_root(&self, root: &Path, path: &str) -> Result<PathBuf> {
+        let root = fs::canonicalize(root).map_err(|e| e.to_string())?;
         let rel = relative(path)?;
         let p = self.resolve(root.join(rel).to_string_lossy().as_ref())?;
-        if !p.starts_with(root) {
+        if !p.starts_with(&root) {
             return Err("Symlink escapes workspace".into());
         }
         Ok(p)

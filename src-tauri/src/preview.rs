@@ -41,6 +41,10 @@ pub fn inject_bridge(html: &str, bridge: &str) -> String {
 }
 impl PreviewServer {
     pub fn start(root: PathBuf) -> Result<Self> {
+        let root = fs::canonicalize(root).map_err(|e| e.to_string())?;
+        if !root.is_dir() {
+            return Err("Preview root must be a directory".into());
+        }
         let server = Server::http("127.0.0.1:0").map_err(|e| e.to_string())?;
         let addr = server
             .server_addr()

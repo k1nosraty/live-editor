@@ -23,3 +23,5 @@ The supplied specification is retained in SPECIFICATION.md. Repository: live-edi
 - [ ] Create/publish a stable release only after release gates pass.
 
 Known functional boundaries (rather than hidden unfinished buttons) are recorded in README and FEATURES: standalone-CSS source edits, literal workspace search, saved-file framework preview, declarative extensions, relative static asset paths and file-only duplicate. No blanket claim that every acceptance criterion in the broad specification is certified.
+
+Linux addition: native `.deb`/AppImage platform configuration, Ubuntu 22.04 packaging/release gate, Linux starter script, WebKit WebDriver integration and per-launch authenticated native gateway. Local Linux packages were built; local GUI execution hit a DBus socket restriction. QML remains a documented feasibility investigation only. This update targets the existing feature branch and PR #1.

@@ -1,5 +1,6 @@
 pub mod documents;
 pub mod git;
+pub mod native_gate;
 pub mod preview;
 pub mod processes;
 pub mod security;
@@ -315,9 +316,41 @@ mod desktop {
         state: State<'_, Arc<Mutex<Backend>>>,
         op: String,
         args: Value,
+        token: String,
+        gate: State<'_, native_gate::NativeGate>,
     ) -> Result<Value> {
+        gate.authorize(&token)?;
         let backend = state.inner().clone();
         tauri::async_runtime::spawn_blocking(move || {
+            if op == "confirm" || op == "inform" {
+                let text = args["text"].as_str().ok_or("Missing dialog text")?;
+                if text.len() > 16000 {
+                    return Err("Dialog text too long".into());
+                }
+                let dialog = app.dialog().message(text).title("Renderift");
+                return if op == "confirm" {
+                    Ok(json!(dialog
+                        .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
+                        .buttons(tauri_plugin_dialog::MessageDialogButtons::OkCancel)
+                        .blocking_show()))
+                } else {
+                    dialog.blocking_show();
+                    Ok(Value::Null)
+                };
+            }
+            if matches!(op.as_str(), "fullscreen" | "close" | "destroy") {
+                let window = app
+                    .get_webview_window("main")
+                    .ok_or("Main window unavailable")?;
+                match op.as_str() {
+                    "fullscreen" => window
+                        .set_fullscreen(!window.is_fullscreen().map_err(|e| e.to_string())?)
+                        .map_err(|e| e.to_string())?,
+                    "close" => window.close().map_err(|e| e.to_string())?,
+                    _ => window.destroy().map_err(|e| e.to_string())?,
+                };
+                return Ok(Value::Null);
+            }
             if op == "select_folder" || op == "select_file" || op == "select_save" {
                 let selection = if op == "select_folder" {
                     app.dialog().file().blocking_pick_folder()
@@ -357,6 +390,18 @@ mod desktop {
             .setup(|app| {
                 let data_dir = app.path().app_data_dir()?;
                 app.manage(Arc::new(Mutex::new(Backend::new(data_dir))));
+                let gate = native_gate::NativeGate::default();
+                let script = gate.initialization_script();
+                app.manage(gate);
+                let config = app
+                    .config()
+                    .app
+                    .windows
+                    .first()
+                    .ok_or("Missing main window configuration")?;
+                tauri::WebviewWindowBuilder::from_config(app, config)?
+                    .initialization_script(script)
+                    .build()?;
                 Ok(())
             })
             .invoke_handler(tauri::generate_handler![dispatch])

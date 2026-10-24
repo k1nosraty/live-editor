@@ -340,9 +340,7 @@
         break;
       case 'fullscreen':
         if (desktop) {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          const win = getCurrentWindow();
-          await win.setFullscreen(!(await win.isFullscreen()));
+          await native('fullscreen');
         } else {
           if (document.fullscreenElement) await document.exitFullscreen();
           else await document.documentElement.requestFullscreen();
@@ -357,13 +355,12 @@
       case 'about':
         extensionPanel = {
           title: 'Renderift',
-          text: 'Write. See. Ship.\n\nVersion 1.0.0 · Development build\nA focused, local-first live coding studio.\nMIT License · k1nosraty/live-editor\n\nWindows release certification is tracked separately in docs/QA-REPORT.md.',
+          text: 'Write. See. Ship.\n\nVersion 1.0.0 · Development build\nA focused, local-first live coding studio.\nMIT License · k1nosraty/live-editor\n\nDesktop release certification is tracked separately in docs/QA-REPORT.md.',
         };
         break;
       case 'exit':
         if (desktop) {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          await getCurrentWindow().close();
+          await native('close');
         }
         break;
       default:
@@ -760,7 +757,7 @@
             )
               return;
             await native('server_stop');
-            await getCurrentWindow().destroy();
+            await native('destroy');
           } finally {
             recovering = false;
           }

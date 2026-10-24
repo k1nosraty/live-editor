@@ -23,3 +23,7 @@ Chromium tests verify iframe parent access is denied and the preview has no Taur
 A sandboxed iframe can still share a renderer with the app. Infinite synchronous loops can make it unresponsive. Strong hang containment requires a separate preview webview/process architecture; no complete process-isolation claim is made.
 
 The app is unsigned. A release must include checksums, identify the unsigned build and be tested on a clean supported Windows installation. There is no telemetry or plaintext credential store.
+
+## Linux native gateway hardening
+
+The previous Linux/Android iframe caveat is addressed for the application's own native mutations with an additional per-launch random secret. Rust injects it only in the trusted main frame at an allowlisted app/dev origin; the backend authenticates it before every gateway operation. The preview iframe is sandboxed, cannot read the parent, and receives no secret in HTML, messages or recovery data. Native confirmation/dialog and fullscreen/close/destroy operations now use the same gateway. The capability file grants only event plumbing and the authenticated custom command, not mutable window/dialog plugin commands. This defense does not claim protection from a compromise of the trusted main UI itself or an unpatched WebKit vulnerability.

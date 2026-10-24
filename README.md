@@ -1,6 +1,6 @@
 # Renderift · Live Editor
 
-**Write. See. Ship.** A local desktop coding studio for Windows 10/11 x64, built with Tauri 2, Rust, Svelte, TypeScript and CodeMirror 6. Repository name: `live-editor`.
+**Write. See. Ship.** A local desktop coding studio for Windows 10/11 and Linux x64, built with Tauri 2, Rust, Svelte, TypeScript and CodeMirror 6. Repository name: `live-editor`.
 
 > **Development candidate, not a certified stable release.** The source implements the application workflows below. Verification status, remaining acceptance gaps and platform limitations are recorded in [QA-REPORT](docs/QA-REPORT.md). No published release or successful GitHub CI run is implied.
 
@@ -39,6 +39,14 @@ npm run tauri build -- --bundles nsis,msi
 Build outputs are in `src-tauri/target/release/bundle`. The `.exe` in `target/release` is a desktop executable, but must be packaged with documented dependencies and tested before it is called a verified portable release.
 
 `npm run dev` opens the browser development surface at `http://127.0.0.1:1420`. Native workspace, Git and process tools require Tauri and are not simulated in the browser.
+
+## Linux
+
+Native `.deb` and AppImage packaging is configured alongside Windows. See [Linux installation, build and verification](docs/LINUX.md). Platform-specific Tauri configuration selects the correct packages/icons; Linux CI uses Ubuntu 22.04 and native WebKit integration tests.
+
+## QML feasibility
+
+QML support was investigated separately. An optional Qt runtime provider is feasible; QML rendering/tooling is **not yet implemented**. See [QML assessment](docs/QML-SUPPORT.md) for architecture, scope and limitations.
 
 ## First five minutes
 

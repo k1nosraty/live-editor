@@ -1,15 +1,12 @@
 {
   "identifier": "main",
-  "description": "Only the bundled application may use the scoped native command gateway.",
-  "windows": ["main"],
+  "description": "Bundled main UI only; native gateway additionally authenticates the main frame.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
-    "core:default",
-    "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen",
-    "allow-dispatch",
-    "dialog:allow-confirm",
-    "dialog:allow-message",
-    "core:window:allow-close",
-    "core:window:allow-destroy"
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-dispatch"
   ]
 }
