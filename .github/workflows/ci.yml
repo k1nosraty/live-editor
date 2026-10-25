@@ -135,7 +135,7 @@ jobs:
       - run: npm run tauri build -- --bundles deb,appimage
       - run: cargo install tauri-driver --locked
       - name: Exercise packaged Linux application and native boundary
-        run: dbus-run-session -- xvfb-run -a python3 scripts/native-smoke.py --binary src-tauri/target/release/live-editor --output release
+        run: xvfb-run -a dbus-run-session -- python3 scripts/native-smoke.py --binary src-tauri/target/release/live-editor --output release
       - name: Collect Linux packages and checksums
         run: |
           cp src-tauri/target/release/bundle/deb/*.deb release/

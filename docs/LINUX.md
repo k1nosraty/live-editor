@@ -47,7 +47,7 @@ To run the native test locally after building:
 ```sh
 sudo apt install xvfb dbus-x11 webkit2gtk-driver
 cargo install tauri-driver --locked
-dbus-run-session -- xvfb-run -a python3 scripts/native-smoke.py \
+xvfb-run -a dbus-run-session -- python3 scripts/native-smoke.py \
   --binary src-tauri/target/release/live-editor --output release/linux-smoke
 ```
 

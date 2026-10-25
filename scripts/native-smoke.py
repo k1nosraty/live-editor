@@ -101,6 +101,23 @@ def main():
                     }).then(()=>done(false)).catch(e=>done(String(e)));
                 """)
                 assert 'Native access denied' in denied, denied
+                state = script("""
+                    const f=document.querySelector('iframe');
+                    return {title:document.title,origin:location.origin,userAgent:navigator.userAgent,
+                            frame:f?{src:f.src,sandbox:f.sandbox.value,ready:f.dataset.ready}:null,
+                            text:document.body.innerText.slice(-3000)};
+                """)
+                if state['frame']:
+                    with urllib.request.urlopen(state['frame']['src'], timeout=10) as response:
+                        html = response.read().decode()
+                        state['preview_http'] = {'status': response.status, 'bytes': len(html),
+                                                 'has_heading': 'Make something' in html}
+                (output / 'native-preview-state.json').write_text(json.dumps(state, indent=2) + '\n')
+                screenshot = request('GET', prefix + '/screenshot')
+                (output / 'linux-before-frame.png').write_bytes(base64.b64decode(screenshot))
+                # Wait for the actual preview bridge before selecting its browsing context.
+                # WebKit may otherwise keep WebDriver in the initial about:blank document.
+                wait_until(lambda: script('return document.querySelector("iframe")?.dataset.ready === "true"'))
                 frame = wait_until(lambda: request('POST', prefix + '/element',
                                                    {'using': 'css selector', 'value': 'iframe'}))
                 request('POST', prefix + '/frame', {'id': frame})
@@ -132,6 +149,7 @@ def main():
                 print((output / 'webdriver.log').read_text())
                 if session:
                     try:
+                        request('POST', prefix + '/frame', {'id': None})
                         screenshot = request('GET', prefix + '/screenshot')
                         (output / 'linux-failure.png').write_bytes(base64.b64decode(screenshot))
                     except (OSError, RuntimeError):

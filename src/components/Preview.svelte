@@ -45,7 +45,7 @@
   let pgPrevious = { html: '', css: '', js: '' };
   let previousMode = '';
   let channel = crypto.randomUUID();
-  let ready = false;
+  let ready = $state(false);
   let scroll = 0;
   let previewRoot = '';
   let staticBase = '';
@@ -351,6 +351,7 @@
           {#if url || srcdoc}<iframe
               bind:this={frame}
               title="Isolated live preview"
+              data-ready={ready}
               sandbox={viteFrame
                 ? 'allow-scripts allow-forms allow-same-origin'
                 : 'allow-scripts allow-forms'}
