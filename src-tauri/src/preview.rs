@@ -133,7 +133,7 @@ impl PreviewServer {
                     Err(e) => (404, e.into_bytes(), "text/plain".into()),
                 };
                 let mut response = Response::from_data(bytes).with_status_code(StatusCode(status));
-                for(name,value)in[("Content-Type",mime.as_str()),("Cache-Control","no-store"),("Access-Control-Allow-Origin","null"),("X-Content-Type-Options","nosniff"),("Content-Security-Policy","default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; frame-ancestors *; object-src 'none'")]{if let Ok(h)=Header::from_bytes(name,value){response.add_header(h)}}
+                for(name,value)in[("Content-Type",mime.as_str()),("Cache-Control","no-store"),("Access-Control-Allow-Origin","null"),("X-Content-Type-Options","nosniff"),("Content-Security-Policy","default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self'; frame-ancestors tauri://localhost http://tauri.localhost https://tauri.localhost http://127.0.0.1:1420; object-src 'none'")]{if let Ok(h)=Header::from_bytes(name,value){response.add_header(h)}}
                 let _ = request.respond(response);
             }
         });
@@ -191,7 +191,18 @@ mod tests {
             .overlays
             .insert("index.html".into(), "unsaved".into());
         let token = s.url.split('/').next_back().unwrap();
-        assert!(request(&s.url, &format!("/{token}/index.html")).contains("unsaved"));
+        let response = request(&s.url, &format!("/{token}/index.html"));
+        assert!(response.contains("unsaved"));
+        // CSP wildcards exclude the packaged Linux/macOS tauri:// origin.
+        let policy = response
+            .lines()
+            .find(|line| {
+                line.to_ascii_lowercase()
+                    .starts_with("content-security-policy:")
+            })
+            .unwrap();
+        assert!(policy.contains("frame-ancestors tauri://localhost http://tauri.localhost https://tauri.localhost http://127.0.0.1:1420;"));
+        assert!(!policy.contains("frame-ancestors *"));
         assert!(request(&s.url, "/index.html").contains("404"));
         assert!(request(&s.url, &format!("/{token}/%2e%2e/secret")).contains("404"));
     }

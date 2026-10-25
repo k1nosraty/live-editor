@@ -87,3 +87,6 @@ Fresh verification after reconstruction passed: 14 default Chromium workflows, 1
 
 
 Hosted follow-up at 3f7f08f: frontend/core and Windows packaging/window-launch smoke passed. Linux packaging and authenticated/forged native command checks passed, but WebDriver timed out after selecting the preview frame. The follow-up waits for the preview's actual bridge-ready handshake before selecting its browsing context, saves HTTP/frame state and a top-level screenshot first, and starts DBus inside the Xvfb display environment. Eight affected browser workflows and type checking passed locally; the hosted native result is pending.
+
+
+The preview server also emitted frame-ancestors *, which does not match the packaged Linux/macOS tauri://localhost ancestor under CSP source-matching rules. Its response policy now explicitly permits the application origins and the configured dev origin instead of a wildcard. The HTTP regression checks the emitted ancestor policy; the native Linux smoke remains the execution gate for this platform fix.
