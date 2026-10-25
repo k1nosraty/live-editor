@@ -1,6 +1,6 @@
 # Implementation ledger
 
-The supplied specification is retained in SPECIFICATION.md. Repository: live-editor; product: Renderift. The remote feature branch was created from develop. Source commits and verification are local; publishing the implementation was blocked by automatic approval review pending explicit user authorization. No PR or release is claimed.
+The supplied specification is retained in SPECIFICATION.md. Repository: live-editor; product: Live Editor. The remote feature branch was created from develop. Source commits and verification are local; publishing the implementation was blocked by automatic approval review pending explicit user authorization. No PR or release is claimed.
 
 | Milestone | Implementation | Actual verification |
 |---|---|---|

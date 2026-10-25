@@ -26,7 +26,13 @@
   } from '../features/preview/engine';
   import { selectionMessage } from '../features/inspector/validation';
   import type { Selection } from '../shared/types';
-  let { onselect }: { onselect: (selection: Selection | null) => void } = $props();
+  let {
+    onselect,
+    onstart,
+  }: {
+    onselect: (selection: Selection | null) => void;
+    onstart: () => void;
+  } = $props();
   let frame = $state<HTMLIFrameElement>();
   let url = $state('');
   let srcdoc = $state('');
@@ -52,6 +58,8 @@
       (!studio.current?.path || !studio.root),
   );
   const scheduler = new Scheduler();
+  let needsVite = $derived(studio.mode === 'project' && !!studio.workspace?.dev && !standalone);
+  let viteFrame = $derived(needsVite && !!studio.serverUrl);
   let rendering = Promise.resolve();
   const bridge = () => bridgeScript(channel);
   function post(type: string, payload: unknown) {
@@ -96,6 +104,12 @@
           pgPrevious = current;
         } else if (studio.serverUrl) {
           url = studio.serverUrl;
+          srcdoc = '';
+          ready = false;
+          onselect(null);
+        } else if (needsVite) {
+          // Framework entry points need Vite transforms, not the static file server.
+          url = '';
           srcdoc = '';
           ready = false;
           onselect(null);
@@ -156,6 +170,7 @@
       studio.active,
       studio.playground,
       studio.serverUrl,
+      studio.workspace,
       studio.root,
       studio.mode === 'project' ? studio.docs.map((d) => [d.name, d.path, d.text]) : null,
     ]);
@@ -336,14 +351,38 @@
           {#if url || srcdoc}<iframe
               bind:this={frame}
               title="Isolated live preview"
-              sandbox="allow-scripts allow-forms"
+              sandbox={viteFrame
+                ? 'allow-scripts allow-forms allow-same-origin'
+                : 'allow-scripts allow-forms'}
               src={url || undefined}
               srcdoc={srcdoc || undefined}
               onload={() => {
                 post('inspector', inspecting);
                 post('scroll', scroll);
               }}
-            ></iframe>{:else}<div class="empty">
+            ></iframe>{:else if needsVite}<div class="empty runtime-empty">
+              <Play size={30} />
+              <h2>{studio.workspace?.framework} project</h2>
+              <p>
+                This index.html loads application source. Start Vite to compile it and see the
+                preview.
+              </p>
+              {#if !studio.workspace?.dependenciesInstalled}
+                <p>Install dependencies in the project folder first:</p>
+                <code>{studio.workspace?.installCommand}</code>
+              {/if}
+              <button
+                class="primary"
+                disabled={!desktop || studio.runtimeStarting}
+                onclick={onstart}
+              >
+                {studio.runtimeStarting ? 'Starting Vite…' : 'Start Vite server'}
+              </button>
+              <p>
+                Save source changes for Vite hot reload. API features also need the project's
+                backend.
+              </p>
+            </div>{:else}<div class="empty">
               <Monitor size={32} />
               <h2>Your canvas is ready</h2>
               <p>Write HTML in a new file, open a static project, or start a Vite server.</p>

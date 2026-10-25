@@ -3,11 +3,13 @@ use crate::{security::Result, workspace};
 use std::os::unix::process::CommandExt;
 use std::{
     collections::VecDeque,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read, Write},
+    net::{TcpListener, TcpStream},
     path::Path,
     process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
     thread,
+    time::{Duration, Instant},
 };
 pub struct Runtime {
     stopped: bool,
@@ -22,6 +24,18 @@ impl Runtime {
         if project["dev"] != true {
             return Err("Only projects with a vite dev script are supported. Configure scripts.dev as vite.".into());
         }
+        if project["dependenciesInstalled"] != true {
+            return Err(format!(
+                "Project dependencies are missing. Run {} in {} and start Vite again.",
+                project["installCommand"].as_str().unwrap_or("npm install"),
+                root.display()
+            ));
+        }
+        // Vite uses strictPort; report conflicts before showing an unrelated server.
+        drop(TcpListener::bind("127.0.0.1:5173").map_err(|_| {
+            "Port 5173 is already in use. Stop that server before starting this project."
+                .to_string()
+        })?);
         let manager = project["manager"].as_str().unwrap_or("npm");
         #[cfg(windows)]
         let executable = format!("{manager}.cmd");
@@ -90,13 +104,57 @@ impl Runtime {
             let log = logs.clone();
             thread::spawn(move || capture(BufReader::new(err), log));
         }
-        Ok(Self {
+        let mut runtime = Self {
             stopped: false,
             child,
             logs,
             #[cfg(windows)]
             job,
-        })
+        };
+        runtime.wait_until_ready()?;
+        Ok(runtime)
+    }
+    fn wait_until_ready(&mut self) -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while Instant::now() < deadline {
+            if !self.running() {
+                return Err(self.start_error("Vite exited before the preview was ready"));
+            }
+            if let Ok(mut socket) = TcpStream::connect_timeout(
+                &"127.0.0.1:5173".parse().unwrap(),
+                Duration::from_millis(100),
+            ) {
+                socket
+                    .set_read_timeout(Some(Duration::from_millis(500)))
+                    .ok();
+                socket
+                    .set_write_timeout(Some(Duration::from_millis(500)))
+                    .ok();
+                if socket
+                    .write_all(b"GET / HTTP/1.0\r\nHost: 127.0.0.1:5173\r\n\r\n")
+                    .is_ok()
+                {
+                    let mut response = [0; 64];
+                    if let Ok(count) = socket.read(&mut response) {
+                        let status = String::from_utf8_lossy(&response[..count]);
+                        if status.starts_with("HTTP/1.1 200") || status.starts_with("HTTP/1.0 200")
+                        {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        Err(self.start_error("Vite did not become ready within 30 seconds"))
+    }
+    fn start_error(&self, message: &str) -> String {
+        let logs = self
+            .logs
+            .lock()
+            .map(|lines| lines.iter().cloned().collect::<Vec<_>>().join("\n"))
+            .unwrap_or_default();
+        format!("{message}. Check Node.js, project dependencies, and vite.config.\n{logs}")
     }
     pub fn running(&mut self) -> bool {
         matches!(self.child.try_wait(), Ok(None))
@@ -142,11 +200,19 @@ impl Drop for Runtime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{
-        io::{Read, Write},
-        net::TcpStream,
-        time::{Duration, Instant},
-    };
+    #[test]
+    fn missing_dependencies_report_install_command_without_launching() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(
+            root.path().join("package.json"),
+            r#"{"scripts":{"dev":"vite"},"devDependencies":{"vite":"*"}}"#,
+        )
+        .unwrap();
+        std::fs::write(root.path().join("package-lock.json"), "{}").unwrap();
+        let error = Runtime::start(root.path()).err().expect("must not start");
+        assert!(error.contains("npm ci"), "{error}");
+        assert!(error.contains("dependencies are missing"), "{error}");
+    }
     #[test]
     #[ignore = "Install both example dependencies and provide Node.js/npm first"]
     fn modern_vite_workflows() {
@@ -157,6 +223,8 @@ mod tests {
                 .join("examples")
                 .join(example);
             let mut runtime = Runtime::start(&root).unwrap();
+            // start() must wait for HTTP readiness before the iframe is navigated.
+            assert!(TcpStream::connect("127.0.0.1:5173").is_ok());
             let deadline = Instant::now() + Duration::from_secs(25);
             let mut ready = false;
             while Instant::now() < deadline {

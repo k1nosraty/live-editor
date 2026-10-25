@@ -54,6 +54,7 @@ export async function openFolder(path?: string): Promise<Workspace | undefined> 
     studio.gitBranch = '';
   }
   studio.root = path;
+  studio.workspace = workspace;
   studio.mode = 'project';
   studio.recent = [path, ...studio.recent.filter((p) => p !== path)].slice(0, 10);
   await native('watch', { root: path });

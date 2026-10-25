@@ -923,6 +923,25 @@ hr {
 .editor-empty button {
   margin-top: 10px;
 }
+.runtime-empty {
+  gap: 12px;
+  max-width: 520px;
+  margin: auto;
+}
+.runtime-empty h2,
+.runtime-empty p {
+  margin: 0;
+}
+.runtime-empty p {
+  line-height: 1.6;
+}
+.runtime-empty code {
+  padding: 8px 12px;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 6px;
+  user-select: all;
+}
 .bottom-divider {
   height: 1px;
   cursor: row-resize;

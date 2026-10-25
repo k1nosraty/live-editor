@@ -1,6 +1,6 @@
 # Architecture
 
-The repository is `live-editor`; Renderift is the desktop product named in the supplied specification. All product code is local. Native operations are never implemented as browser simulations.
+The repository and desktop product are **Live Editor**. The original brief in SPECIFICATION.md used a superseded working name. Existing application identifiers, recovery/extension storage keys and private IPC protocol keys are retained for compatibility with installed candidates; UI, executable, launcher and distribution names use Live Editor. All product code is local. Native operations are never implemented as browser simulations.
 
 ## Responsibilities and state
 

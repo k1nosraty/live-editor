@@ -194,7 +194,15 @@ pub fn detect(root: &Path) -> serde_json::Value {
     } else {
         "npm"
     };
-    serde_json::json!({"root":root,"name":root.file_name().unwrap_or_default().to_string_lossy(),"framework":framework,"manager":manager,"dev":dev})
+    let dependencies_installed = root.join("node_modules/.bin/vite").is_file()
+        || root.join("node_modules/.bin/vite.cmd").is_file();
+    let install_command = match manager {
+        "pnpm" => "pnpm install --frozen-lockfile",
+        "yarn" => "yarn install",
+        _ if root.join("package-lock.json").is_file() => "npm ci",
+        _ => "npm install",
+    };
+    serde_json::json!({"root":root,"name":root.file_name().unwrap_or_default().to_string_lossy(),"framework":framework,"manager":manager,"dev":dev,"dependenciesInstalled":dependencies_installed,"installCommand":install_command})
 }
 pub fn approved_root(scope: &Scope, path: &str) -> Result<PathBuf> {
     let p = fs::canonicalize(path).map_err(|e| e.to_string())?;

@@ -1,4 +1,4 @@
-use renderift_core::preview::PreviewServer;
+use live_editor_core::preview::PreviewServer;
 use std::{
     io::{self, Write},
     path::Path,

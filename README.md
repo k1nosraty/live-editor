@@ -1,8 +1,8 @@
-# Renderift · Live Editor
+# Live Editor
 
 **Write. See. Ship.** A local desktop coding studio for Windows 10/11 and Linux x64, built with Tauri 2, Rust, Svelte, TypeScript and CodeMirror 6. Repository name: `live-editor`.
 
-> **Development candidate, not a certified stable release.** The source implements the application workflows below. Verification status, remaining acceptance gaps and platform limitations are recorded in [QA-REPORT](docs/QA-REPORT.md). No published release or successful GitHub CI run is implied.
+> **Development candidate, not a certified stable release.** The source implements the application workflows below. Verification status, remaining acceptance gaps and platform limitations are recorded in [QA-REPORT](docs/QA-REPORT.md). Hosted verification and remaining release gates are recorded in that report.
 
 ![Actual application running in Chromium during automated UI testing](docs/screenshots/studio.png)
 
@@ -30,7 +30,7 @@ npm ci
 npm run tauri dev
 ```
 
-Or use `Start-Renderift.bat`, which checks prerequisites and installs dependencies only when the lockfile changes. It never downloads an unknown runtime or installs workspace dependencies.
+Or use `Start-Live-Editor.bat`, which checks prerequisites and installs dependencies only when the lockfile changes. It never downloads an unknown runtime or installs workspace dependencies.
 
 ```powershell
 npm run tauri build -- --bundles nsis,msi
@@ -54,7 +54,9 @@ QML support was investigated separately. An optional Qt runtime provider is feas
 2. Use the pointer button in Preview, then click an element. Select an exact CSS source rule, change a value, and Apply to source. Ctrl+Z in the source editor undoes the edit.
 3. Use File → Playground to import/export, or create another session from the sidebar.
 4. Switch to Project and Open Folder. Open `examples/html-css-js/index.html`; stylesheets, ES modules and relative files are served through a read-only loopback preview server, including unsaved open buffers.
-5. For `examples/react-vite` or `examples/vue-vite`, run `npm ci` inside the example folder yourself, open the folder, and choose Run → Start Vite Server. **Save changes to update the framework preview.** Never run a project whose code or dependencies you do not trust.
+5. For `examples/react-vite` or `examples/vue-vite`, run `npm ci` inside the example folder, open that folder, and click **Start Vite server** in Preview. Opening index.html alone cannot compile React/Vue/TypeScript source. **Save changes to update the framework preview.** Never run a project whose code or dependencies you do not trust.
+
+For [sematic-word-game](https://github.com/k1nosraty/sematic-word-game), select its **frontend** folder, install its dependencies with `npm ci`, then start Vite from the preview panel. Its Python API runs separately at `127.0.0.1:8000`; the frontend can render without it, but playing games and loading account/game data require that backend.
 
 ## Verification
 

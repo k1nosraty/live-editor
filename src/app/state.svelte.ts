@@ -7,6 +7,7 @@ import {
   type Layout,
   type Playground,
   type ConsoleEntry,
+  type Workspace,
 } from '../shared/types';
 import { makePlayground } from '../features/playground/templates';
 import { readSession, writeSession } from '../features/settings/persistence';
@@ -28,6 +29,8 @@ export class Studio {
   problems = $state<string[]>([]);
   serverLog = $state<string[]>([]);
   serverUrl = $state('');
+  workspace = $state<Workspace>();
+  runtimeStarting = $state(false);
   gitBranch = $state('');
   cursor = $state({ line: 1, column: 1 });
   notice = $state('');

@@ -1,6 +1,6 @@
 # QML support: feasibility and proposed scope
 
-Status: investigated, **not implemented or advertised as a working preview feature**. Current `.qml` files can be opened as UTF-8 plain text, but there is no QML language service or Qt renderer in Renderift.
+Status: investigated, **not implemented or advertised as a working preview feature**. Current `.qml` files can be opened as UTF-8 plain text, but there is no QML language service or Qt renderer in Live Editor.
 
 ## Decision
 

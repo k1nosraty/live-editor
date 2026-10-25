@@ -24,11 +24,11 @@ Open Folder grants native scope. Explorer supports nested directories, file/fold
 
 ## Project runtimes
 
-React/Vue/vanilla Vite manifests and package-manager lockfiles are detected. Install dependencies explicitly in your terminal. Run → Start asks before running the existing Vite dev script. Host is loopback, port 5173 is strict. Stop/Restart cleans up process lifetime; logs appear under Server output. Save files for framework preview and Vite HMR. Missing runtimes and failed starts produce actionable messages/logs.
+React/Vue/vanilla Vite manifests and package-manager lockfiles are detected. Opening their index.html shows a framework launch panel instead of a blank static page. Install dependencies explicitly in the selected project folder using the displayed command, then choose Start Vite server or Run → Start and confirm execution. Live Editor waits for an HTTP-ready server before loading the preview; missing dependencies, an occupied port, failed configuration and startup timeouts report actionable errors/logs. Vite previews retain their own loopback origin for modules, storage and cookies while remaining separate from the main app. Stop/Restart cleans up process lifetime; logs appear under Server output. Save files for framework preview and Vite HMR.
 
 ## Git
 
-Source Control shows the branch and staged/unstaged files. Choose a file for its diff, use +/- to stage/unstage, and commit with a message. Discard asks for confirmation. History, create/switch branch and fetch/pull/push are available. Switching with local changes is rejected. Git initialization is offered if no repository is detected. Remote actions use existing Git credentials and normal Git errors; Renderift does not collect passwords.
+Source Control shows the branch and staged/unstaged files. Choose a file for its diff, use +/- to stage/unstage, and commit with a message. Discard asks for confirmation. History, create/switch branch and fetch/pull/push are available. Switching with local changes is rejected. Git initialization is offered if no repository is detected. Remote actions use existing Git credentials and normal Git errors; Live Editor does not collect passwords.
 
 ## Extensions and preferences
 

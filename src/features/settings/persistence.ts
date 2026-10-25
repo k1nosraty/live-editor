@@ -17,6 +17,7 @@ export interface Session {
   settings: Settings;
   layout: Layout;
 }
+// Preserve recovery from candidates published under the former working name.
 const key = 'renderift.session.v1';
 const bounded = (value: unknown, fallback: number, min: number, max: number) =>
   typeof value === 'number' && Number.isFinite(value)

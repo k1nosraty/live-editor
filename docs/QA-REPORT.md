@@ -1,6 +1,6 @@
-# QA report — Renderift 1.0.0 development candidate
+# QA report — Live Editor 1.0.0 development candidate
 
-Verification date: 2026-10-25 (Asia/Tehran). Host: Linux x86_64, Node.js 22 runtime, Rust stable 1.99.1. Windows cross-target: x86_64-pc-windows-gnu. The application has **not** been executed on Windows in this session. This report does not certify the complete production-ready acceptance specification.
+Verification date: 2026-10-25 (Asia/Tehran). Host: Linux x86_64, Node.js 22 runtime, Rust stable 1.99.1. Windows cross-target: x86_64-pc-windows-gnu. Local verification runs on Linux; hosted Windows packaging and a basic launch smoke passed for commit 6d93ae7. Clean-machine installation and complete Windows workflows remain unverified. This report does not certify the complete production-ready acceptance specification.
 
 ## Executed checks
 
@@ -18,7 +18,7 @@ Verification date: 2026-10-25 (Asia/Tehran). Host: Linux x86_64, Node.js 22 runt
 | NSIS packaging | Local Linux makensis generated an installer from Tauri's generated script; see distribution files for actual byte counts |
 | Windows execution/installer/portable smoke | Not run: no Windows execution environment available |
 | MSI packaging | Not run: requires Windows/WiX |
-| Hosted GitHub CI | Not run: implementation push was rejected by automatic approval review |
+| Hosted GitHub CI | At 6d93ae7 frontend, core and Windows passed; Linux packages built, but native smoke failed because tauri-driver required an absolute WebKitWebDriver path. This update fixes the path; current hosted results are pending |
 
 ## Evidence
 
@@ -71,3 +71,16 @@ A repeated local AppImage bundle attempt hit a segmentation fault in linuxdeploy
 File → New previously switched to project mode without providing a preview source unless a workspace or Vite server was open. Unsaved HTML now uses the isolated document preview; standalone HTML opened without a folder uses the same path. Full-document serialization retains `lang`, `dir`, head styles and scripts. Active-tab changes now invalidate the preview even without text edits.
 
 Local checks passed: Svelte/TypeScript (zero errors/warnings), ESLint, 10 unit tests and the production build. Three new Chromium workflows cover the reported Persian profile card in an unsaved tab with/without an existing workspace, live edits, tab switching, early script/console execution, parent/native isolation, and a restored standalone `.HTM` file. Five existing playground, persistence, inspector/Undo, isolation and extension browser workflows also passed. Direct execution of this fix in Windows WebView2 remains unverified.
+
+
+## Live Editor naming, Vite preview and CI update
+
+Product titles, menu/dialog text, native binary, launchers and packages now use Live Editor. Legacy launchers forward to Start-Live-Editor; identifiers and recovery/extension keys remain stable for data compatibility.
+
+Opening a React/Vue/Vite entry point now shows a launch panel with a dependency check and install command. Startup waits for HTTP readiness and reports port conflicts or startup logs. The Vite iframe retains its own loopback origin for modules, cookies and storage while parent/native access remains denied. Static/playground iframe isolation is unchanged.
+
+Before the temporary execution environment reset, this update passed 15 Chromium workflows (14 defaults plus the actual semantic-word-game/frontend), 10 frontend unit tests, Svelte/ESLint, full desktop Clippy, 13 Rust tests including the real Vite runtimes, and a Windows GNU target check. A native Linux binary and renamed Debian package were also built. The game frontend rendered inside the editor with its expected API-unavailable state: the Python backend and full gameplay were not run. The update was reconstructed from the recorded source changes after the reset; fresh verification and hosted checks validate the published tree.
+
+CI investigation: early Windows failures were canonical-path containment regressions, fixed and subsequently passing. Older Linux jobs were cancelled by newer pushes; their always-running artifact uploader then reported missing packages. Completed run 40138518310 built both Linux package formats but tauri-driver exited before listening because --native-driver received a relative binary name. The smoke script now resolves WebKitWebDriver through PATH, passes its absolute path, fails immediately if the driver exits, and preserves failure logs/screenshots. An actual driver /status probe passed with the resolved path before the reset. CI now validates feature branches through PRs, caches Rust builds, and separates diagnostic uploads from passing packages.
+
+Fresh verification after reconstruction passed: 14 default Chromium workflows, 10 frontend unit tests, Svelte/ESLint and production build, core Clippy with warnings denied, and all 13 Rust tests including the real React/Vue runtime test.

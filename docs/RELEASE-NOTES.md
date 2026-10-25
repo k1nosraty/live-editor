@@ -1,4 +1,4 @@
-# Renderift 1.0.0 — development candidate
+# Live Editor 1.0.0 — development candidate
 
 Desktop coding studio with CodeMirror editing, isolated live HTML/CSS/JS preview, responsive viewports, console capture, source-aware standalone CSS edits, project file tools, Git commands, a Vite runtime manager, local declarative extensions, themes and recovery.
 

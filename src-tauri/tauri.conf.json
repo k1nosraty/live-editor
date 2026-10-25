@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Renderift",
+  "productName": "Live Editor",
   "version": "1.0.0",
   "identifier": "io.github.k1nosraty.renderift",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Renderift \u2014 Live Editor",
+        "title": "Live Editor",
         "width": 1440,
         "height": 920,
         "minWidth": 960,

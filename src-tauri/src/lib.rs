@@ -327,7 +327,7 @@ mod desktop {
                 if text.len() > 16000 {
                     return Err("Dialog text too long".into());
                 }
-                let dialog = app.dialog().message(text).title("Renderift");
+                let dialog = app.dialog().message(text).title("Live Editor");
                 return if op == "confirm" {
                     Ok(json!(dialog
                         .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
@@ -406,7 +406,7 @@ mod desktop {
             })
             .invoke_handler(tauri::generate_handler![dispatch])
             .run(tauri::generate_context!())
-            .expect("Renderift desktop runtime");
+            .expect("Live Editor desktop runtime");
     }
 }
 #[cfg(feature = "desktop")]

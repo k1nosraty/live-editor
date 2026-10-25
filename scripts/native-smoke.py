@@ -4,6 +4,7 @@ import argparse
 import base64
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -21,6 +22,9 @@ def main():
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     endpoint = 'http://127.0.0.1:4444'
+    native_driver = shutil.which('WebKitWebDriver')
+    if not native_driver:
+        raise RuntimeError('WebKitWebDriver is missing. Install webkit2gtk-driver first.')
 
     def request(method, route, data=None):
         body = None if data is None else json.dumps(data).encode()
@@ -49,16 +53,24 @@ def main():
             time.sleep(.15)
         raise AssertionError(f'Native UI condition timed out: {last}')
 
-    with tempfile.TemporaryDirectory(prefix='renderift-native-test-') as private:
+    with tempfile.TemporaryDirectory(prefix='live-editor-native-test-') as private:
         env = {**os.environ, 'XDG_DATA_HOME': private + '/data',
                'XDG_CONFIG_HOME': private + '/config', 'XDG_CACHE_HOME': private + '/cache',
-               'LIBGL_ALWAYS_SOFTWARE': '1'}
+               'LIBGL_ALWAYS_SOFTWARE': '1', 'WEBKIT_DISABLE_DMABUF_RENDERER': '1',
+               'WEBKIT_DISABLE_COMPOSITING_MODE': '1'}
         with (output / 'webdriver.log').open('w') as log:
-            driver = subprocess.Popen([args.driver, '--native-driver', 'WebKitWebDriver'],
+            driver = subprocess.Popen([args.driver, '--native-driver', native_driver],
                                       stdout=log, stderr=subprocess.STDOUT, env=env)
             session = None
             try:
-                wait_until(lambda: request('GET', '/status'))
+                def driver_ready():
+                    if driver.poll() is not None:
+                        log.flush()
+                        raise AssertionError('tauri-driver exited before startup:\n' +
+                                             (output / 'webdriver.log').read_text())
+                    return request('GET', '/status')
+
+                wait_until(driver_ready)
                 start = time.monotonic()
                 value = request('POST', '/session', {'capabilities': {'alwaysMatch': {
                     'tauri:options': {'application': str(Path(args.binary).resolve())}}}})
@@ -74,7 +86,7 @@ def main():
                 wait_until(lambda: script("return !!document.querySelector('.cm-content')"))
                 startup_ms = round((time.monotonic() - start) * 1000)
                 title = script('return document.title')
-                assert 'Renderift' in title, title
+                assert 'Live Editor' in title, title
                 authorized = async_script("""
                     const done=arguments[arguments.length-1];
                     window.__TAURI_INTERNALS__.invoke('dispatch',{
@@ -115,6 +127,16 @@ def main():
                           'note': 'Virtual-display WebKitGTK integration, not a clean desktop installation benchmark.'}
                 (output / 'SMOKE-Linux-x64.json').write_text(json.dumps(report, indent=2) + '\n')
                 print(json.dumps(report, indent=2))
+            except Exception:
+                log.flush()
+                print((output / 'webdriver.log').read_text())
+                if session:
+                    try:
+                        screenshot = request('GET', prefix + '/screenshot')
+                        (output / 'linux-failure.png').write_bytes(base64.b64decode(screenshot))
+                    except (OSError, RuntimeError):
+                        pass
+                raise
             finally:
                 if session:
                     try:

@@ -21,7 +21,7 @@ fn run(root: &Path, args: &[&str]) -> Result<String> {
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
         .output()
-        .map_err(|e| format!("Git could not start. Install Git and restart Renderift: {e}"))?;
+        .map_err(|e| format!("Git could not start. Install Git and restart Live Editor: {e}"))?;
     if !out.status.success() && !(args.contains(&"--no-index") && out.status.code() == Some(1)) {
         return Err(String::from_utf8_lossy(&out.stderr).trim().into());
     }
@@ -155,7 +155,7 @@ mod tests {
         let t = tempfile::tempdir().unwrap();
         operation(t.path(), "init", None, None).unwrap();
         run(t.path(), &["config", "user.email", "test@example.invalid"]).unwrap();
-        run(t.path(), &["config", "user.name", "Renderift Test"]).unwrap();
+        run(t.path(), &["config", "user.name", "Live Editor Test"]).unwrap();
         std::fs::write(t.path().join("hello.txt"), "first").unwrap();
         assert!(operation(t.path(), "diff", Some("hello.txt"), None)
             .unwrap()

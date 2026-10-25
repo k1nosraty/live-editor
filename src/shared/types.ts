@@ -64,6 +64,8 @@ export interface Workspace {
   framework: string;
   manager: string;
   dev: boolean;
+  dependenciesInstalled: boolean;
+  installCommand: string;
 }
 export interface SearchHit {
   path: string;

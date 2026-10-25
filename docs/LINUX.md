@@ -4,8 +4,8 @@ Target architecture: x86_64. Linux is built natively; the Windows executable is 
 
 ## Packages
 
-- **`.deb`**: Debian/Ubuntu package with the Tauri-generated desktop entry, PNG icon and runtime dependencies, plus `xdg-utils` for opening files/URLs. Install using `sudo apt install ./Renderift_*.deb` so dependencies are resolved.
-- **`.AppImage`**: executable distribution with a larger bundled dependency set. Run `chmod +x Renderift_*.AppImage` and execute it. It still requires a compatible glibc/graphics stack. If FUSE is unavailable, try `APPIMAGE_EXTRACT_AND_RUN=1 ./Renderift_*.AppImage` or the `.deb` package.
+- **`.deb`**: Debian/Ubuntu package with the Tauri-generated desktop entry, PNG icon and runtime dependencies, plus `xdg-utils` for opening files/URLs. Install using `sudo apt install ./Live\ Editor_*.deb` so dependencies are resolved.
+- **`.AppImage`**: executable distribution with a larger bundled dependency set. Run `chmod +x ./Live\ Editor_*.AppImage` and execute it. It still requires a compatible glibc/graphics stack. If FUSE is unavailable, try `APPIMAGE_EXTRACT_AND_RUN=1 ./Live\ Editor_*.AppImage` or the `.deb` package.
 
 Do not expect an AppImage to match the small Windows installer size: packaging WebKitGTK/GTK-related dependencies can make it substantially larger. No exact size target is claimed without measuring an actual artifact.
 
@@ -22,13 +22,13 @@ npm run tauri dev
 NO_STRIP=true npm run tauri build -- --bundles deb,appimage
 ```
 
-`Start-Renderift.sh` checks installed tools and reuses dependencies if the npm lockfile has not changed. It does not download a runtime or install workspace project dependencies. Source builds need the development libraries; installed `.deb` users need only the runtime packages declared in the package.
+`Start-Live-Editor.sh` checks installed tools and reuses dependencies if the npm lockfile has not changed. It does not download a runtime or install workspace project dependencies. Source builds need the development libraries; installed `.deb` users need only the runtime packages declared in the package.
 
 Build outputs: `src-tauri/target/release/bundle/deb/` and `bundle/appimage/`. For broad glibc compatibility use the oldest supported builder; the CI uses Ubuntu 22.04. Locally building on Ubuntu 24.04 does not establish Ubuntu 22.04 binary compatibility.
 
 ## Desktop workflows
 
-Native Open/Save dialogs, file watching/search, GTK/WebKit rendering, Git and Vite use the same Rust modules as Windows. System reveal and local preview opening use `xdg-open`. A desktop launched through a menu may not inherit shell initialization or a Node version manager's PATH; missing runtime errors identify the required local package manager. Renderift does not source shell startup scripts automatically.
+Native Open/Save dialogs, file watching/search, GTK/WebKit rendering, Git and Vite use the same Rust modules as Windows. System reveal and local preview opening use `xdg-open`. A desktop launched through a menu may not inherit shell initialization or a Node version manager's PATH; missing runtime errors identify the required local package manager. Live Editor does not source shell startup scripts automatically.
 
 Playground/static editing works without Node.js. React/Vue/Vite project execution requires a local runtime and explicitly installed project dependencies. Git operations require system Git and its configured credential helper.
 
@@ -48,7 +48,7 @@ To run the native test locally after building:
 sudo apt install xvfb dbus-x11 webkit2gtk-driver
 cargo install tauri-driver --locked
 dbus-run-session -- xvfb-run -a python3 scripts/native-smoke.py \
-  --binary src-tauri/target/release/renderift --output release/linux-smoke
+  --binary src-tauri/target/release/live-editor --output release/linux-smoke
 ```
 
 A virtual-display smoke is not clean desktop installation/uninstallation QA. Remaining checks include real X11/Wayland sessions, file dialogs, package installation, fonts/Persian input, system-browser launching and AppImage behavior on representative distributions.

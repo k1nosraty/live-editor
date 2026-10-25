@@ -1,16 +1,16 @@
 [package]
-name = "renderift"
+name = "live-editor"
 version = "1.0.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 
 [lib]
-name = "renderift_core"
+name = "live_editor_core"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "renderift"
+name = "live-editor"
 path = "src/main.rs"
 required-features = ["desktop"]
 

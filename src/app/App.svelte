@@ -62,7 +62,7 @@
   let explorer = $state<Explorer>();
   let git = $state<GitPanel>();
   let preview = $state<Preview>();
-  let project = $state<Workspace | undefined>();
+  let project = $derived(studio.workspace);
   let tabMenu = $state('');
   let dragged = '';
   let palette = $state<'commands' | 'files' | null>(null);
@@ -200,19 +200,30 @@
     }
   });
   async function start() {
+    if (studio.runtimeStarting) return;
     if (!studio.root) throw new Error('Open a Vite project first');
-    project = await native<Workspace>('detect', { root: studio.root });
-    if (!project.dev)
+    const workspace = await native<Workspace>('detect', { root: studio.root });
+    studio.workspace = workspace;
+    if (!workspace.dev)
       throw new Error('Configure scripts.dev as vite and install project dependencies first.');
+    if (!workspace.dependenciesInstalled)
+      throw new Error(
+        `Install this project's dependencies first: run ${workspace.installCommand} in ${studio.root}, then start Vite again.`,
+      );
     if (
       !(await ask(
-        `Run ${project.manager} run dev in ${project.name}? This executes code from the project and its dependencies.`,
+        `Run ${workspace.manager} run dev in ${workspace.name}? This executes code from the project and its dependencies.`,
       ))
     )
       return;
     studio.serverLog = [];
-    studio.serverUrl = await native<string>('server_start', { root: studio.root });
     studio.layout.bottom = true;
+    studio.runtimeStarting = true;
+    try {
+      studio.serverUrl = await native<string>('server_start', { root: studio.root });
+    } finally {
+      studio.runtimeStarting = false;
+    }
   }
   async function stop() {
     await native('server_stop');
@@ -229,7 +240,7 @@
         await actions.openFile();
         break;
       case 'folder':
-        project = await actions.openFolder();
+        await actions.openFolder();
         sidebar = 'explorer';
         studio.layout.sidebar = true;
         break;
@@ -348,13 +359,13 @@
         break;
       case 'docs':
         extensionPanel = {
-          title: 'Renderift · Quick reference',
+          title: 'Live Editor · Quick reference',
           text: 'Playground: write HTML, CSS, and JavaScript. Preview refreshes after 200 ms. CSS updates preserve page state.\n\nProjects: Open Folder grants access to that workspace. Static HTML previews include unsaved open buffers. React/Vue/Vite: install dependencies yourself, then Run → Start. Save changes for Vite HMR.\n\nInspector: activate the pointer in Preview, select an element, then choose an exact standalone CSS rule to edit. Generated styles are inspect-only.\n\nExtensions: install a local JSON manifest or ZIP containing manifest.json. Example packages are in extensions/examples.\n\nSearch: Ctrl+F · Replace: Ctrl+H · Command palette: Ctrl+Shift+P. Full documentation is in the repository docs folder.',
         };
         break;
       case 'about':
         extensionPanel = {
-          title: 'Renderift',
+          title: 'Live Editor',
           text: 'Write. See. Ship.\n\nVersion 1.0.0 · Development build\nA focused, local-first live coding studio.\nMIT License · k1nosraty/live-editor\n\nDesktop release certification is tracked separately in docs/QA-REPORT.md.',
         };
         break;
@@ -478,14 +489,14 @@
       label: 'Help',
       items: [
         { id: 'docs', label: 'Quick Reference' },
-        { id: 'about', label: 'About Renderift' },
+        { id: 'about', label: 'About Live Editor' },
       ],
     },
   ]);
   function menuAction(id: string) {
     if (id.startsWith('recent:')) {
       attempt(async () => {
-        project = await actions.openFolder(studio.recent[Number(id.slice(7))]);
+        await actions.openFolder(studio.recent[Number(id.slice(7))]);
         sidebar = 'explorer';
       });
     } else action(id);
@@ -752,7 +763,7 @@
             if (
               studio.docs.some((d) => !d.id.startsWith('pg:') && dirty(d)) &&
               !(await ask(
-                'Close Renderift? Unsaved edits are preserved in recovery, but have not been saved to source files.',
+                'Close Live Editor? Unsaved edits are preserved in recovery, but have not been saved to source files.',
               ))
             )
               return;
@@ -778,7 +789,7 @@
           }
         }
         if (studio.root) {
-          project = await native<Workspace>('detect', { root: studio.root });
+          studio.workspace = await native<Workspace>('detect', { root: studio.root });
           await native('watch', { root: studio.root });
         }
       });
@@ -795,7 +806,7 @@
 
 <svelte:head
   ><title
-    >Renderift — {studio.mode === 'playground'
+    >Live Editor — {studio.mode === 'playground'
       ? studio.playground.name
       : (project?.name ?? 'Live Editor')}</title
   ></svelte:head
@@ -811,7 +822,7 @@
   <header class="app-header">
     <div class="brand">
       <span class="brand-symbol"><Braces size={20} /></span><strong
-        >renderift<span class="brand-period">.</span></strong
+        >live editor<span class="brand-period">.</span></strong
       >
     </div>
     <MenuBar {menus} onaction={menuAction} />
@@ -936,12 +947,16 @@
             'Get started'}</span
         ><span class="spacer"></span>{#if studio.mode === 'project'}<button
             class="run-button"
-            disabled={!desktop}
+            disabled={!desktop || studio.runtimeStarting}
             title={studio.serverUrl ? 'Stop Vite server' : 'Run Vite development server'}
             onclick={() => action(studio.serverUrl ? 'stop' : 'start')}
             >{#if studio.serverUrl}<Square size={12} />{:else}<Play
                 size={12}
-              />{/if}{studio.serverUrl ? 'Stop' : 'Run'}</button
+              />{/if}{studio.runtimeStarting
+              ? 'Starting…'
+              : studio.serverUrl
+                ? 'Stop'
+                : 'Run'}</button
           >{/if}
         <div class="tools layout-tools">
           <button
@@ -1072,7 +1087,11 @@
             aria-label="Resize editor and preview"
             onpointerdown={(e) => resize(e, 'editor')}
           ></button>{/if}
-        <Preview bind:this={preview} onselect={(s) => (selection = s)} />{#if selection}<Inspector
+        <Preview
+          bind:this={preview}
+          onselect={(s) => (selection = s)}
+          onstart={() => action('start')}
+        />{#if selection}<Inspector
             {selection}
             onclose={() => (selection = null)}
             onnavigate={navigate}
