@@ -75,6 +75,8 @@ jobs:
       - run: npm ci
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: npm ci --prefix examples/react-vite && npm ci --prefix examples/vue-vite
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked modern_vite_workflows -- --ignored
       - run: npm run tauri build -- --bundles nsis,msi
       - name: Package portable distribution
         shell: pwsh
@@ -132,6 +134,8 @@ jobs:
       - run: npm ci
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: npm ci --prefix examples/react-vite && npm ci --prefix examples/vue-vite
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked modern_vite_workflows -- --ignored
       - run: npm run tauri build -- --bundles deb,appimage
       - run: cargo install tauri-driver --locked
       - name: Exercise packaged Linux application and native boundary
