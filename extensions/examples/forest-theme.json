@@ -1,0 +1,1 @@
+{"id":"forest.studio","name":"Forest Studio","version":"1.0.0","apiVersion":"1","permissions":[],"themes":[{"name":"Forest","accent":"#a9d99a","background":"#15231c"}],"commands":[{"id":"apply","title":"Apply Forest","action":"setTheme","value":"Forest"}]}

@@ -1,0 +1,12 @@
+{
+  "identifier": "main",
+  "description": "Bundled main UI only; native gateway additionally authenticates the main frame.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-dispatch"
+  ]
+}
