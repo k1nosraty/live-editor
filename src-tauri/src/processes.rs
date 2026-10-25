@@ -319,7 +319,17 @@ mod tests {
                 .unwrap()
                 .join("examples")
                 .join(example);
-            let mut runtime = Runtime::start(&root).unwrap();
+            let entry = root.join("index.html");
+            let original = fs::read_to_string(&entry).unwrap();
+            let draft = original.replace("</head>", "<meta name=\"live-editor-draft\" /></head>");
+            let mut runtime = Runtime::start_with_buffers(
+                &root,
+                &[Buffer {
+                    path: entry.to_string_lossy().into(),
+                    text: draft,
+                }],
+            )
+            .unwrap();
             // start() must wait for HTTP readiness before the iframe is navigated.
             assert!(TcpStream::connect("127.0.0.1:5173").is_ok());
             let deadline = Instant::now() + Duration::from_secs(25);
@@ -338,14 +348,47 @@ mod tests {
                         .write_all(b"GET / HTTP/1.0\r\nHost: 127.0.0.1:5173\r\n\r\n")
                         .unwrap();
                     let mut response = String::new();
-                    if socket.read_to_string(&mut response).is_ok() && response.contains("200 OK") {
+                    if socket.read_to_string(&mut response).is_ok()
+                        && response.contains("200 OK")
+                        && response.contains("live-editor-draft")
+                    {
                         ready = true;
                         break;
                     }
                 }
                 thread::sleep(Duration::from_millis(100));
             }
-            assert!(ready, "Vite did not serve {example}");
+            assert!(
+                ready,
+                "Vite did not serve the initial unsaved HTML for {example}"
+            );
+            assert_eq!(fs::read_to_string(&entry).unwrap(), original);
+            runtime.update(&[]).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(15);
+            let mut cleared = false;
+            while Instant::now() < deadline {
+                let mut socket = TcpStream::connect("127.0.0.1:5173").unwrap();
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                socket
+                    .write_all(b"GET / HTTP/1.0\r\nHost: 127.0.0.1:5173\r\n\r\n")
+                    .unwrap();
+                let mut response = String::new();
+                if socket.read_to_string(&mut response).is_ok()
+                    && response.contains("200 OK")
+                    && !response.contains("live-editor-draft")
+                {
+                    cleared = true;
+                    break;
+                }
+                thread::sleep(Duration::from_millis(100));
+            }
+            assert!(
+                cleared,
+                "Vite did not clear the unsaved overlay for {example}"
+            );
+            assert_eq!(fs::read_to_string(&entry).unwrap(), original);
             runtime.stop();
             assert!(!runtime.running());
             thread::sleep(Duration::from_millis(200));
