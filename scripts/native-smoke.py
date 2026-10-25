@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the packaged Linux UI through Tauri's native WebKit WebDriver."""
 import argparse
-import base64
 import json
 import os
 import shutil
@@ -25,13 +24,16 @@ def main():
     native_driver = shutil.which('WebKitWebDriver')
     if not native_driver:
         raise RuntimeError('WebKitWebDriver is missing. Install webkit2gtk-driver first.')
+    screenshot_tool = shutil.which('scrot')
+    if not screenshot_tool:
+        raise RuntimeError('scrot is missing. Install it to capture the Xvfb desktop.')
 
-    def request(method, route, data=None):
+    def request(method, route, data=None, timeout=45):
         body = None if data is None else json.dumps(data).encode()
         req = urllib.request.Request(endpoint + route, data=body, method=method,
                                      headers={'Content-Type': 'application/json'})
         try:
-            with urllib.request.urlopen(req, timeout=45) as response:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
                 result = json.load(response)
         except urllib.error.HTTPError as error:
             raise RuntimeError(error.read().decode()) from error
@@ -113,8 +115,6 @@ def main():
                         state['preview_http'] = {'status': response.status, 'bytes': len(html),
                                                  'has_heading': 'Make something' in html}
                 (output / 'native-preview-state.json').write_text(json.dumps(state, indent=2) + '\n')
-                screenshot = request('GET', prefix + '/screenshot')
-                (output / 'linux-before-frame.png').write_bytes(base64.b64decode(screenshot))
                 # Wait for the actual preview bridge before selecting its browsing context.
                 # WebKit may otherwise keep WebDriver in the initial about:blank document.
                 wait_until(lambda: script('return document.querySelector("iframe")?.dataset.ready === "true"'))
@@ -134,13 +134,16 @@ def main():
                 wait_until(lambda: script("return document.querySelector('h1').textContent.includes('already')"))
                 request('POST', prefix + '/frame', {'id': None})
                 wait_until(lambda: script("return document.querySelector('.console-message')?.textContent.includes('taking shape')"))
-                screenshot = request('GET', prefix + '/screenshot')
-                (output / 'linux-desktop.png').write_bytes(base64.b64decode(screenshot))
+                # WebKit's screenshot endpoint hangs with the opaque iframe; capture Xvfb directly.
+                time.sleep(.2)
+                subprocess.run([screenshot_tool, '-o', str(output / 'linux-desktop.png')],
+                               env=env, check=True, timeout=10)
                 report = {'status': 'passed', 'title': title,
                           'ui_ready_after_webdriver_session_ms': startup_ms,
                           'native_authenticated_call': True, 'forged_native_call_denied': True,
                           'iframe_parent_access_denied': True, 'iframe_native_token_absent': True,
                           'preview_interaction_and_console': True,
+                          'screenshot_state': 'Xvfb desktop after preview interaction and console verification.',
                           'note': 'Virtual-display WebKitGTK integration, not a clean desktop installation benchmark.'}
                 (output / 'SMOKE-Linux-x64.json').write_text(json.dumps(report, indent=2) + '\n')
                 print(json.dumps(report, indent=2))
@@ -149,16 +152,15 @@ def main():
                 print((output / 'webdriver.log').read_text())
                 if session:
                     try:
-                        request('POST', prefix + '/frame', {'id': None})
-                        screenshot = request('GET', prefix + '/screenshot')
-                        (output / 'linux-failure.png').write_bytes(base64.b64decode(screenshot))
-                    except (OSError, RuntimeError):
+                        subprocess.run([screenshot_tool, '-o', str(output / 'linux-failure.png')],
+                                       env=env, check=True, timeout=10)
+                    except (OSError, subprocess.SubprocessError):
                         pass
                 raise
             finally:
                 if session:
                     try:
-                        request('DELETE', '/session/' + session)
+                        request('DELETE', '/session/' + session, timeout=10)
                     except (OSError, RuntimeError):
                         pass
                 driver.terminate()

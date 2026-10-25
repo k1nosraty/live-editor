@@ -124,7 +124,7 @@ jobs:
       - name: Install Linux desktop prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils xvfb dbus-x11 webkit2gtk-driver
+          sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils xvfb dbus-x11 webkit2gtk-driver scrot
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -135,7 +135,7 @@ jobs:
       - run: npm run tauri build -- --bundles deb,appimage
       - run: cargo install tauri-driver --locked
       - name: Exercise packaged Linux application and native boundary
-        run: xvfb-run -a dbus-run-session -- python3 scripts/native-smoke.py --binary src-tauri/target/release/live-editor --output release
+        run: xvfb-run -a --server-args="-screen 0 1600x1000x24" dbus-run-session -- python3 scripts/native-smoke.py --binary src-tauri/target/release/live-editor --output release
       - name: Collect Linux packages and checksums
         run: |
           cp src-tauri/target/release/bundle/deb/*.deb release/

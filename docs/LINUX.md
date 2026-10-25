@@ -45,7 +45,7 @@ The Linux CI job installs WebKitGTK, runs native Rust checks/tests, builds `.deb
 To run the native test locally after building:
 
 ```sh
-sudo apt install xvfb dbus-x11 webkit2gtk-driver
+sudo apt install xvfb dbus-x11 webkit2gtk-driver scrot
 cargo install tauri-driver --locked
 xvfb-run -a dbus-run-session -- python3 scripts/native-smoke.py \
   --binary src-tauri/target/release/live-editor --output release/linux-smoke

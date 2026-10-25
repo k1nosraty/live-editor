@@ -90,3 +90,6 @@ Hosted follow-up at 3f7f08f: frontend/core and Windows packaging/window-launch s
 
 
 The preview server also emitted frame-ancestors *, which does not match the packaged Linux/macOS tauri://localhost ancestor under CSP source-matching rules. Its response policy now explicitly permits the application origins and the configured dev origin instead of a wildcard. The HTTP regression checks the emitted ancestor policy; the native Linux smoke remains the execution gate for this platform fix.
+
+
+At 98b3e5e, Windows passed and Linux completed every native assertion: authenticated access, forged-token denial, rendered iframe heading, parent/token isolation, real button interaction and console capture. The job failed afterward only because WebKit's screenshot endpoint hung. Native evidence now captures the Xvfb display through scrot with a bounded timeout, retaining all functional/security assertions and a real screenshot after interaction. No application or boundary check is skipped.
