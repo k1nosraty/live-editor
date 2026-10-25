@@ -16,7 +16,7 @@
     Play,
   } from '@lucide/svelte';
   import { studio } from '../app/state.svelte';
-  import { attempt } from '../app/actions';
+  import { attempt, runtimeBuffers } from '../app/actions';
   import { desktop, native } from '../services/native';
   import {
     buildPlayground,
@@ -103,10 +103,15 @@
           }
           pgPrevious = current;
         } else if (studio.serverUrl) {
-          url = studio.serverUrl;
-          srcdoc = '';
-          ready = false;
-          onselect(null);
+          if (desktop)
+            await native('server_update', { root: studio.root, buffers: runtimeBuffers() });
+          if (ticket !== requested) return;
+          if (force || previousMode !== mode || !url.startsWith(`${studio.serverUrl}/`)) {
+            url = `${studio.serverUrl}/?preview=${++sequence}`;
+            srcdoc = '';
+            ready = false;
+            onselect(null);
+          }
         } else if (needsVite) {
           // Framework entry points need Vite transforms, not the static file server.
           url = '';
@@ -172,7 +177,7 @@
       studio.serverUrl,
       studio.workspace,
       studio.root,
-      studio.mode === 'project' ? studio.docs.map((d) => [d.name, d.path, d.text]) : null,
+      studio.mode === 'project' ? studio.docs.map((d) => [d.name, d.path, d.text, d.saved]) : null,
     ]);
     void signature;
     if (auto) scheduler.schedule(() => attempt(() => render()), studio.settings.debounce);
@@ -238,7 +243,7 @@
         >{standalone
           ? 'HTML document'
           : studio.serverUrl
-            ? 'Vite · saved files'
+            ? 'Live project'
             : studio.mode === 'playground'
               ? 'Playground'
               : 'Static workspace'}</span
@@ -364,12 +369,9 @@
             ></iframe>{:else if needsVite}<div class="empty runtime-empty">
               <Play size={30} />
               <h2>{studio.workspace?.framework} project</h2>
-              <p>
-                This index.html loads application source. Start Vite to compile it and see the
-                preview.
-              </p>
+              <p>Live preview starts automatically when this project opens.</p>
               {#if !studio.workspace?.dependenciesInstalled}
-                <p>Install dependencies in the project folder first:</p>
+                <p>Install project dependencies once:</p>
                 <code>{studio.workspace?.installCommand}</code>
               {/if}
               <button
@@ -377,11 +379,10 @@
                 disabled={!desktop || studio.runtimeStarting}
                 onclick={onstart}
               >
-                {studio.runtimeStarting ? 'Starting Vite…' : 'Start Vite server'}
+                {studio.runtimeStarting ? 'Preparing preview…' : 'Enable live preview'}
               </button>
               <p>
-                Save source changes for Vite hot reload. API features also need the project's
-                backend.
+                Type to see changes without saving. API features still need the project's backend.
               </p>
             </div>{:else}<div class="empty">
               <Monitor size={32} />

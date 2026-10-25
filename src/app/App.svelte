@@ -145,9 +145,9 @@
     { id: 'zen', title: 'Toggle focus mode' },
     { id: 'reset', title: 'Reset layout' },
     { id: 'refresh', title: 'Refresh preview', key: 'F5' },
-    { id: 'start', title: 'Start Vite development server' },
+    { id: 'start', title: 'Resume live preview' },
     { id: 'stop', title: 'Stop development server' },
-    { id: 'restart', title: 'Restart development server' },
+    { id: 'restart', title: 'Restart live preview' },
     { id: 'settings', title: 'Open settings' },
     { id: 'extensions', title: 'Manage extensions' },
     ...extensions
@@ -200,30 +200,7 @@
     }
   });
   async function start() {
-    if (studio.runtimeStarting) return;
-    if (!studio.root) throw new Error('Open a Vite project first');
-    const workspace = await native<Workspace>('detect', { root: studio.root });
-    studio.workspace = workspace;
-    if (!workspace.dev)
-      throw new Error('Configure scripts.dev as vite and install project dependencies first.');
-    if (!workspace.dependenciesInstalled)
-      throw new Error(
-        `Install this project's dependencies first: run ${workspace.installCommand} in ${studio.root}, then start Vite again.`,
-      );
-    if (
-      !(await ask(
-        `Run ${workspace.manager} run dev in ${workspace.name}? This executes code from the project and its dependencies.`,
-      ))
-    )
-      return;
-    studio.serverLog = [];
-    studio.layout.bottom = true;
-    studio.runtimeStarting = true;
-    try {
-      studio.serverUrl = await native<string>('server_start', { root: studio.root });
-    } finally {
-      studio.runtimeStarting = false;
-    }
+    await actions.startPreview();
   }
   async function stop() {
     await native('server_stop');
@@ -360,7 +337,7 @@
       case 'docs':
         extensionPanel = {
           title: 'Live Editor · Quick reference',
-          text: 'Playground: write HTML, CSS, and JavaScript. Preview refreshes after 200 ms. CSS updates preserve page state.\n\nProjects: Open Folder grants access to that workspace. Static HTML previews include unsaved open buffers. React/Vue/Vite: install dependencies yourself, then Run → Start. Save changes for Vite HMR.\n\nInspector: activate the pointer in Preview, select an element, then choose an exact standalone CSS rule to edit. Generated styles are inspect-only.\n\nExtensions: install a local JSON manifest or ZIP containing manifest.json. Example packages are in extensions/examples.\n\nSearch: Ctrl+F · Replace: Ctrl+H · Command palette: Ctrl+Shift+P. Full documentation is in the repository docs folder.',
+          text: 'Playground: write HTML, CSS, and JavaScript. Preview refreshes after 200 ms. CSS updates preserve page state.\n\nProjects: Open Folder grants access to that workspace. Static HTML previews include unsaved open buffers. React/Vue/Vite: install dependencies once and approve the project on first open. Preview starts automatically and includes unsaved changes while you type.\n\nInspector: activate the pointer in Preview, select an element, then choose an exact standalone CSS rule to edit. Generated styles are inspect-only.\n\nExtensions: install a local JSON manifest or ZIP containing manifest.json. Example packages are in extensions/examples.\n\nSearch: Ctrl+F · Replace: Ctrl+H · Command palette: Ctrl+Shift+P. Full documentation is in the repository docs folder.',
         };
         break;
       case 'about':
@@ -469,9 +446,9 @@
       label: 'Run',
       items: [
         { id: 'refresh', label: 'Refresh Preview', key: 'F5' },
-        { id: 'start', label: 'Start Vite Server', disabled: !desktop || !!studio.serverUrl },
-        { id: 'stop', label: 'Stop Server', disabled: !studio.serverUrl },
-        { id: 'restart', label: 'Restart Server', disabled: !studio.serverUrl },
+        { id: 'start', label: 'Resume Live Preview', disabled: !desktop || !!studio.serverUrl },
+        { id: 'stop', label: 'Pause Live Preview', disabled: !studio.serverUrl },
+        { id: 'restart', label: 'Restart Live Preview', disabled: !studio.serverUrl },
       ],
     },
     {
@@ -791,6 +768,8 @@
         if (studio.root) {
           studio.workspace = await native<Workspace>('detect', { root: studio.root });
           await native('watch', { root: studio.root });
+          if (studio.workspace?.dev && studio.workspace.dependenciesInstalled)
+            await actions.startPreview();
         }
       });
     }
@@ -948,15 +927,15 @@
         ><span class="spacer"></span>{#if studio.mode === 'project'}<button
             class="run-button"
             disabled={!desktop || studio.runtimeStarting}
-            title={studio.serverUrl ? 'Stop Vite server' : 'Run Vite development server'}
+            title={studio.serverUrl ? 'Pause live preview' : 'Resume live preview'}
             onclick={() => action(studio.serverUrl ? 'stop' : 'start')}
             >{#if studio.serverUrl}<Square size={12} />{:else}<Play
                 size={12}
               />{/if}{studio.runtimeStarting
               ? 'Starting…'
               : studio.serverUrl
-                ? 'Stop'
-                : 'Run'}</button
+                ? 'Pause'
+                : 'Preview'}</button
           >{/if}
         <div class="tools layout-tools">
           <button
@@ -1074,7 +1053,7 @@
             <div class="editor-hint">
               <span
                 ><span class="live-dot"></span>{studio.serverUrl
-                  ? 'Save to update Vite preview'
+                  ? 'Live preview · unsaved changes included'
                   : 'Changes appear as you type'}</span
               ><button title="Format document" onclick={() => action('format')}
                 >Format<kbd>⇧ Alt F</kbd></button

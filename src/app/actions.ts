@@ -39,6 +39,7 @@ export async function openFile() {
   if (path) await openPath(path);
 }
 export async function openFolder(path?: string): Promise<Workspace | undefined> {
+  if (studio.runtimeStarting) throw new Error('Wait for the current preview to finish starting.');
   path = path ?? (await pickFolder()) ?? undefined;
   if (!path) return;
   const workspace = await native<Workspace>('detect', { root: path });
@@ -53,13 +54,56 @@ export async function openFolder(path?: string): Promise<Workspace | undefined> 
   } catch {
     studio.gitBranch = '';
   }
-  studio.root = path;
+  studio.root = workspace.root;
   studio.workspace = workspace;
   studio.mode = 'project';
   studio.recent = [path, ...studio.recent.filter((p) => p !== path)].slice(0, 10);
   await native('watch', { root: path });
   studio.active = studio.visibleDocs.at(-1)?.id ?? '';
+  if (workspace.dev) {
+    try {
+      await openPath(`${workspace.root}/index.html`);
+    } catch {
+      /* Some projects use a custom entry. */
+    }
+    if (workspace.dependenciesInstalled) await startPreview();
+  }
   return workspace;
+}
+export function runtimeBuffers() {
+  return studio.docs
+    .filter((doc) => doc.path && dirty(doc))
+    .map((doc) => ({ path: doc.path!, text: doc.text }));
+}
+export async function startPreview() {
+  if (studio.runtimeStarting || studio.serverUrl) return;
+  if (!studio.root) throw new Error('Open a project first');
+  studio.runtimeStarting = true;
+  try {
+    const workspace = await native<Workspace>('detect', { root: studio.root });
+    studio.workspace = workspace;
+    if (!workspace.dev) throw new Error('This project needs a Vite dev script.');
+    if (!workspace.dependenciesInstalled)
+      throw new Error(
+        `Install dependencies once: run ${workspace.installCommand} in ${studio.root}.`,
+      );
+    const trusted = await native<boolean>('server_trusted', { root: studio.root });
+    if (
+      !trusted &&
+      !(await ask(
+        `Enable automatic live preview for ${workspace.name}? This runs the project's code and dependencies. Your choice is remembered for this folder.`,
+      ))
+    )
+      return;
+    studio.serverLog = [];
+    studio.serverUrl = await native<string>('server_start', {
+      root: studio.root,
+      trust: !trusted,
+      buffers: runtimeBuffers(),
+    });
+  } finally {
+    studio.runtimeStarting = false;
+  }
 }
 export async function saveDoc(doc = studio.current, as = false): Promise<boolean> {
   if (!doc) return false;

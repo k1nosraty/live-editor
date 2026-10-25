@@ -98,7 +98,7 @@ for (const fixture of cases) {
         },
         { workspace: runtime.workspace, html },
       );
-      await expect(page.locator('.runtime-empty')).toContainText('Start Vite');
+      await expect(page.locator('.runtime-empty')).toContainText('Enable live preview');
       await expect(page.locator('iframe')).toHaveCount(0);
       await page.evaluate(async (url) => {
         const stateModule = '/src/app/state.svelte.ts';
@@ -126,11 +126,31 @@ for (const fixture of cases) {
       if (fixture.name === 'user repository frontend') {
         // No backend is started: the frontend must render its API-unavailable state.
         await expect(preview.getByText('چالش امروز در دسترس نیست.', { exact: true })).toBeVisible();
+        host.stdin!.write(
+          JSON.stringify([
+            {
+              path: filename,
+              text: original.replace(
+                'بازی <span className="gradient-text">معنایی</span> واژگان',
+                'پیش‌نمایش زنده',
+              ),
+            },
+          ]) + '\n',
+        );
+        await expect(preview.locator('h1').first()).toHaveText('پیش‌نمایش زنده');
+        expect(await readFile(filename, 'utf8')).toBe(original);
       } else {
         await preview.getByRole('button', { name: 'Count: 0' }).click();
         await expect(preview.getByRole('button', { name: 'Count: 1' })).toBeVisible();
-        await writeFile(filename, original.replace(fixture.heading, 'A saved live update.'));
-        await expect(preview.locator('h1')).toHaveText('A saved live update.');
+        host.stdin!.write(
+          JSON.stringify([
+            { path: filename, text: original.replace(fixture.heading, 'An unsaved live update.') },
+          ]) + '\n',
+        );
+        await expect(preview.locator('h1')).toHaveText('An unsaved live update.');
+        expect(await readFile(filename, 'utf8')).toBe(original);
+        host.stdin!.write('[]\n');
+        await expect(preview.locator('h1')).toHaveText(fixture.heading);
       }
     } finally {
       await writeFile(filename, original);

@@ -46,7 +46,7 @@ Static CSS-only buffer updates are injected into matching stylesheets. Other sou
 
 ## Framework runtimes
 
-Detection reads package.json and lockfiles. Starting a Vite dev script is an explicit, confirmed operation and uses an argument array, never concatenated user shell text. It uses an existing runtime/manager and fixed loopback port. Vite handles its own HMR after Save; unsaved framework buffers are not claimed to render. Windows children are assigned to a kill-on-close job; Unix children use a process group for normal cleanup. Logs and console entries are bounded.
+Detection reads package.json and lockfiles. The first Vite start requires project execution approval, stored in native application data separately from session recovery. Approved folders start automatically on open/recovery. Execution uses an argument array, never concatenated user shell text. It uses an existing runtime/manager and fixed loopback port. An embedded Vite adapter preserves project plugins/configuration and overlays dirty editor buffers through load, HTML and hot-update hooks. Validated snapshots live in a private temporary directory, never in project sources. Changes and Undo trigger Vite HMR; closing or saving a buffer clears its overlay. The snapshot is seeded before startup to include recovery edits. Windows children are assigned to a kill-on-close job; Unix children use a process group for normal cleanup. Logs and console entries are bounded.
 
 ## Extension choice
 

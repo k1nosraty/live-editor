@@ -9,7 +9,7 @@ use notify::{RecursiveMode, Watcher};
 use security::{Result, Scope};
 use serde_json::{json, Value};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -19,6 +19,7 @@ pub struct Backend {
     preview: Option<preview::PreviewServer>,
     playground_preview: Option<preview::PreviewServer>,
     runtime: Option<processes::Runtime>,
+    trusted_previews: HashSet<PathBuf>,
     watcher: Option<notify::RecommendedWatcher>,
     changes: Arc<Mutex<Vec<String>>>,
     pub data_dir: PathBuf,
@@ -38,11 +39,20 @@ impl Backend {
                 }
             }
         }
+        let trusted_previews = fs::read(data_dir.join("preview-trust.json"))
+            .ok()
+            .filter(|bytes| bytes.len() <= 1024 * 1024)
+            .and_then(|bytes| serde_json::from_slice::<Vec<PathBuf>>(&bytes).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .take(100)
+            .collect();
         Self {
             scope,
             preview: None,
             playground_preview: None,
             runtime: None,
+            trusted_previews,
             watcher: None,
             changes: Arc::new(Mutex::new(vec![])),
             data_dir,
@@ -53,6 +63,20 @@ impl Backend {
         let bytes = serde_json::to_vec(&(&self.scope.roots, &self.scope.files))
             .map_err(|e| e.to_string())?;
         security::atomic_write(&self.data_dir.join("grants.json"), &bytes)
+    }
+    fn runtime_buffers(&self, args: &Value, root: &Path) -> Result<Vec<processes::Buffer>> {
+        let buffers: Vec<processes::Buffer> =
+            serde_json::from_value(args.get("buffers").cloned().unwrap_or_else(|| json!([])))
+                .map_err(|error| error.to_string())?;
+        let mut approved = Vec::new();
+        for mut buffer in buffers {
+            let path = self.scope.resolve(&buffer.path)?;
+            if path.starts_with(root) {
+                buffer.path = path.to_string_lossy().into();
+                approved.push(buffer);
+            }
+        }
+        Ok(approved)
     }
     pub fn watch(&mut self, path: &Path) -> Result<()> {
         let events = self.changes.clone();
@@ -197,13 +221,37 @@ impl Backend {
                 data.bridge = string("bridge")?.into();
                 Ok(Value::Null)
             }
+            "server_trusted" => {
+                let root = workspace::approved_root(&self.scope, string("root")?)?;
+                Ok(json!(self.trusted_previews.contains(&root)))
+            }
             "server_start" => {
                 if self.runtime.is_some() {
                     return Err("Stop the existing development server first".into());
                 }
                 let root = workspace::approved_root(&self.scope, string("root")?)?;
-                self.runtime = Some(processes::Runtime::start(&root)?);
+                if !self.trusted_previews.contains(&root) {
+                    if args["trust"] != true {
+                        return Err("Approve this project before starting its preview".into());
+                    }
+                    self.trusted_previews.insert(root.clone());
+                    fs::create_dir_all(&self.data_dir).map_err(|error| error.to_string())?;
+                    let bytes = serde_json::to_vec(&self.trusted_previews)
+                        .map_err(|error| error.to_string())?;
+                    security::atomic_write(&self.data_dir.join("preview-trust.json"), &bytes)?;
+                }
+                let buffers = self.runtime_buffers(&args, &root)?;
+                self.runtime = Some(processes::Runtime::start_with_buffers(&root, &buffers)?);
                 Ok(json!("http://127.0.0.1:5173"))
+            }
+            "server_update" => {
+                let root = workspace::approved_root(&self.scope, string("root")?)?;
+                let runtime = self.runtime.as_ref().ok_or("Live preview is not running")?;
+                if runtime.root != root {
+                    return Err("Live preview workspace changed".into());
+                }
+                runtime.update(&self.runtime_buffers(&args, &root)?)?;
+                Ok(Value::Null)
             }
             "server_stop" => {
                 self.runtime = None;
@@ -416,6 +464,40 @@ pub use desktop::run;
 mod tests {
     use super::*;
     use std::time::{Duration, Instant};
+    #[test]
+    fn automatic_preview_requires_remembered_project_approval() {
+        let root = tempfile::tempdir().unwrap();
+        let data = tempfile::tempdir().unwrap();
+        fs::write(
+            root.path().join("package.json"),
+            r#"{"scripts":{"dev":"vite"},"devDependencies":{"vite":"*"}}"#,
+        )
+        .unwrap();
+        let mut backend = Backend::new(data.path().into());
+        let root = backend.scope.approve_root(root.path()).unwrap();
+        backend.persist_grants().unwrap();
+        assert_eq!(
+            backend
+                .execute("server_trusted", json!({"root":root}))
+                .unwrap(),
+            false
+        );
+        assert!(backend
+            .execute("server_start", json!({"root":root}))
+            .unwrap_err()
+            .contains("Approve"));
+        assert!(backend
+            .execute("server_start", json!({"root":root,"trust":true}))
+            .unwrap_err()
+            .contains("dependencies are missing"));
+        let mut restored = Backend::new(data.path().into());
+        assert_eq!(
+            restored
+                .execute("server_trusted", json!({"root":root}))
+                .unwrap(),
+            true
+        );
+    }
     #[test]
     fn native_file_lifecycle_and_durable_grants() {
         let root = tempfile::tempdir().unwrap();

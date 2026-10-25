@@ -14,7 +14,7 @@
 - Native file/folder dialogs, scoped workspace files, create/rename/move/duplicate/delete, text/filename search, filesystem watching and disk-conflict handling.
 - Console output, uncaught exceptions and promise rejections; source-parser syntax diagnostics in Problems.
 - Visual element selection, computed styles, box model and matching CSS rules. Exact standalone CSS rules can be edited through the inspector with source synchronization and editor Undo.
-- React/Vue/vanilla Vite detection and explicit start/stop/restart using installed package managers. Framework preview uses saved files and Vite HMR.
+- React/Vue/vanilla Vite projects start preview automatically after one project approval. Typing updates Vite HMR from unsaved buffers; source files change only when you save.
 - Git status, staged/unstaged diffs, stage, unstage, discard confirmation, commit, history, branches, fetch/pull/push using system Git credentials.
 - Local versioned declarative extensions: themes, snippets, templates, commands, panels and document events. Install, enable, disable and uninstall; two real example packages.
 - Three themes, accent colors, density, font preferences, adjustable panels, preview/focus/fullscreen layouts and session recovery. English interface; Persian UTF-8 content and RTL webpage previews.
@@ -54,9 +54,9 @@ QML support was investigated separately. An optional Qt runtime provider is feas
 2. Use the pointer button in Preview, then click an element. Select an exact CSS source rule, change a value, and Apply to source. Ctrl+Z in the source editor undoes the edit.
 3. Use File → Playground to import/export, or create another session from the sidebar.
 4. Switch to Project and Open Folder. Open `examples/html-css-js/index.html`; stylesheets, ES modules and relative files are served through a read-only loopback preview server, including unsaved open buffers.
-5. For `examples/react-vite` or `examples/vue-vite`, run `npm ci` inside the example folder, open that folder, and click **Start Vite server** in Preview. Opening index.html alone cannot compile React/Vue/TypeScript source. **Save changes to update the framework preview.** Never run a project whose code or dependencies you do not trust.
+5. For `examples/react-vite` or `examples/vue-vite`, run `npm ci` inside the example folder once, open that folder, and approve automatic preview on first use. **Type to see changes without Run or Save.** React/Vue compilation runs in the background. Approval is remembered for that folder. Never approve a project whose code or dependencies you do not trust.
 
-For [sematic-word-game](https://github.com/k1nosraty/sematic-word-game), select its **frontend** folder, install its dependencies with `npm ci`, then start Vite from the preview panel. Its Python API runs separately at `127.0.0.1:8000`; the frontend can render without it, but playing games and loading account/game data require that backend.
+For [sematic-word-game](https://github.com/k1nosraty/sematic-word-game), select its **frontend** folder, install its dependencies with `npm ci`, then approve automatic preview when opening that folder. Its Python API runs separately at `127.0.0.1:8000`; the frontend can render without it, but playing games and loading account/game data require that backend.
 
 ## Verification
 
